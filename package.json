@@ -1,0 +1,30 @@
+{
+  "name": "pgvector-cluster",
+  "version": "1.0.0",
+  "description": "used to cluster data in pgvector datasets",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davepreston/pgvector-cluster.git"
+  },
+  "keywords": [
+    "pgvector",
+    "embeddings",
+    "dbscan",
+    "cluster",
+    "similarity",
+    "searching"
+  ],
+  "author": "davepreston",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/davepreston/pgvector-cluster/issues"
+  },
+  "homepage": "https://github.com/davepreston/pgvector-cluster#readme",
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}
