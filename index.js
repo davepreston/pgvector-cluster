@@ -42,7 +42,6 @@ async function scan({ name, epsilon, minPoints } = {}) {
   } while (focusPoint);
 
   console.log('done');
-  await client.release();
 }
 
 async function assessSurroundingArea({
