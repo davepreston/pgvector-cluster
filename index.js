@@ -13,35 +13,44 @@ module.exports = {
 //   configData = { ...data };
 // }
 
-async function scan({ name, epsilon, minPoints } = {}) {
-  name ??= `test2: ${epsilon}/${minPoints}`;
+async function scan({
+  epsilon,
+  minPoints,
+  name = `test3: ${epsilon}/${minPoints}`,
+  vectorTable = 'embedding',
+} = {}) {
+  try {
+    await sql`insert into point (scan_name, embedding_id, updated_at)
+  select ${name} , id, now() from ${sql(vectorTable)}`;
 
-  await sql`insert into point (scan_name, embedding_id, updated_at)
-  select ${name} , id, now() from embedding`;
-
-  // loop until we don't have any unassessed points.
-  let focusPoint;
-  do {
-    focusPoint = (
-      await sql`select point.id, point.cluster_id, embedding.id as embedding_id, embedding.vector from point
+    // loop until we don't have any unassessed points.
+    let focusPoint;
+    do {
+      focusPoint = (
+        await sql`select point.id, point.cluster_id, embedding.id as embedding_id, embedding.vector from point
         join embedding on embedding.id = point.embedding_id
         where point.scan_name = ${name}
         and point.assessed = false
         order by point.cluster_id
         limit 1`
-    )[0];
-    if (focusPoint) {
-      await assessSurroundingArea({
-        focusPoint,
-        epsilon,
-        minPoints,
-        scanName: name,
-      });
-    }
-    console.log('end of loop');
-  } while (focusPoint);
+      )[0];
+      if (focusPoint) {
+        await assessSurroundingArea({
+          focusPoint,
+          epsilon,
+          minPoints,
+          scanName: name,
+          vectorTable,
+        });
+      }
+      console.log('end of loop');
+    } while (focusPoint);
 
-  console.log('done');
+    console.log('done');
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
 }
 
 async function assessSurroundingArea({
@@ -49,13 +58,14 @@ async function assessSurroundingArea({
   epsilon,
   minPoints,
   scanName,
+  vectorTable,
 }) {
   try {
     const res = await sql`SELECT point.id
-          FROM embedding
-          join point on point.embedding_id = embedding.id
+          FROM ${sql(vectorTable)}
+          join point on point.embedding_id = ${sql(vectorTable)}.${sql('id')}
           where point.scan_name = ${scanName}
-          and embedding.vector <=> ${focusPoint.vector} < ${epsilon}
+          and ${sql(vectorTable)}.vector <=> ${focusPoint.vector} < ${epsilon}
       `;
     if (res.length >= minPoints) {
       const clusterId = focusPoint.cluster_id || getNextClusterId();
