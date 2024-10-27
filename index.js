@@ -95,7 +95,6 @@ async function assessSurroundingArea({
           where id = ${focusPoint.point_id}
         `;
       } else {
-        // await sql`insert into ${sql(clusterTable)} (cluster_id, assessed, type)
         await sql`insert into ${sql(
           clusterTable
         )} (assessed, embedding_id, scan_name, cluster_id, type) 
@@ -106,7 +105,6 @@ async function assessSurroundingArea({
       }
       const newNeighbors = neighbors.filter((i) => !i.point_id);
       const oldNeighbors = neighbors.filter((i) => i.point_id);
-      // insert many for all neighbors
       if (newNeighbors.length) {
         await sql`insert into ${sql(
           clusterTable
