@@ -1,17 +1,9 @@
 const postgres = require('postgres');
-
 const sql = postgres(process.env.DATABASE_URL);
-// let configData = {};
 
 module.exports = {
   scan,
-  // config,
 };
-
-// // todo consider border points as noise as an option
-// async function config(data) {
-//   configData = { ...data };
-// }
 
 async function scan({
   epsilon,
@@ -53,10 +45,10 @@ async function scan({
           clusterTable,
         });
       }
-      console.log('end of loop');
+      // console.log('end of loop');
     } while (focusPoint);
 
-    console.log('done');
+    // console.log('done');
   } catch (error) {
     console.error(error);
     throw error;
