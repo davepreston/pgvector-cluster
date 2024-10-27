@@ -17,25 +17,28 @@ async function scan({
   epsilon,
   minPoints,
   name = `${epsilon}/${minPoints}`,
-  vectorTable = 'embedding',
+  vectorTable = '${sql(vectorTable)}',
+  clusterTable = 'point',
+  vectorId = 'id',
+  vectorColumn = 'vector',
 } = {}) {
   try {
-    // await sql`insert into point (scan_name, embedding_id)
-    //   select ${name} , id from ${sql(vectorTable)}`;
-
-    // loop until we don't have any unassessed points.
     let focusPoint;
     do {
       focusPoint = (
-        await sql`select point.id as point_id, point.cluster_id, embedding.id as embedding_id, embedding.vector 
-        from embedding
-        left join point on point.scan_name = ${name} and embedding.id = point.embedding_id
-        where point.assessed = false or point.assessed is null
---        from point
---        join embedding on embedding.id = point.embedding_id
---        where point.scan_name = $ {name}
---        and point.assessed = false
-        order by point.cluster_id
+        await sql`select ${sql(clusterTable)}.id as point_id, ${sql(
+          clusterTable
+        )}.cluster_id, ${sql(vectorTable)}.id as embedding_id, ${sql(vectorTable)}.${sql(vectorColumn)} 
+        from ${sql(vectorTable)}
+        left join ${sql(clusterTable)} on ${sql(
+          clusterTable
+        )}.scan_name = ${name} and ${sql(vectorTable)}.id = ${sql(
+          clusterTable
+        )}.embedding_id
+        where ${sql(clusterTable)}.assessed = false or ${sql(
+          clusterTable
+        )}.assessed is null
+        order by ${sql(clusterTable)}.cluster_id
         limit 1`
       )[0];
       if (focusPoint) {
@@ -45,6 +48,9 @@ async function scan({
           minPoints,
           scanName: name,
           vectorTable,
+          vectorId,
+          vectorColumn,
+          clusterTable,
         });
       }
       console.log('end of loop');
@@ -63,58 +69,69 @@ async function assessSurroundingArea({
   minPoints,
   scanName,
   vectorTable,
+  vectorId,
+  vectorColumn,
+  clusterTable,
 }) {
   try {
-    const neighbors = await sql`SELECT point.id as point_id, ${sql(
-      vectorTable
-    )}.id as embedding_id
+    const neighbors = await sql`SELECT ${sql(
+      clusterTable
+    )}.id as point_id, ${sql(vectorTable)}.${sql(vectorId)} as embedding_id
           FROM ${sql(vectorTable)}
-          left join point on point.embedding_id = ${sql(vectorTable)}.${sql(
-      'id'
-    )} 
-            and point.scan_name = ${scanName}
-          where ${sql(vectorTable)}.vector <=> ${focusPoint.vector} < ${epsilon}
+          left join ${sql(clusterTable)} on ${sql(
+      clusterTable
+    )}.embedding_id = ${sql(vectorTable)}.${sql('id')} 
+            and ${sql(clusterTable)}.scan_name = ${scanName}
+          where ${sql(vectorTable)}.${sql(vectorColumn)} <=> ${focusPoint.vector} < ${epsilon}
       `;
     if (neighbors.length >= minPoints) {
       const clusterId = focusPoint.cluster_id || getNextClusterId();
       // todo convert to insert with conflict ??
       if (focusPoint.point_id) {
-        await sql`update point set
+        await sql`update ${sql(clusterTable)} set
           cluster_id = ${clusterId},
           assessed = true,
           type = 'core'
           where id = ${focusPoint.point_id}
         `;
       } else {
-        // await sql`insert into point (cluster_id, assessed, type)
-        await sql`insert into point (assessed, embedding_id, scan_name, cluster_id, type) 
-        values (true, ${focusPoint.embedding_id}, ${scanName}, ${clusterId}, 'core')
+        // await sql`insert into ${sql(clusterTable)} (cluster_id, assessed, type)
+        await sql`insert into ${sql(
+          clusterTable
+        )} (assessed, embedding_id, scan_name, cluster_id, type) 
+        values (true, ${
+          focusPoint.embedding_id
+        }, ${scanName}, ${clusterId}, 'core')
       `;
       }
       const newNeighbors = neighbors.filter((i) => !i.point_id);
       const oldNeighbors = neighbors.filter((i) => i.point_id);
       // insert many for all neighbors
       if (newNeighbors.length) {
-        await sql`insert into point (embedding_id, scan_name, cluster_id) 
+        await sql`insert into ${sql(
+          clusterTable
+        )} (embedding_id, scan_name, cluster_id) 
        values ${sql(
          newNeighbors.map((i) => [i.embedding_id, scanName, clusterId])
        )}`;
       }
 
       if (oldNeighbors.length) {
-        await sql`update point set cluster_id = ${clusterId}
+        await sql`update ${sql(clusterTable)} set cluster_id = ${clusterId}
           where id = ANY (${oldNeighbors.map((i) => i.point_id)})
           and cluster_id is null
         `;
       }
     } else {
       if (focusPoint.point_id) {
-        await sql`update point set
+        await sql`update ${sql(clusterTable)} set
           assessed = true
           where id = ${focusPoint.point_id}
         `;
       } else {
-        await sql`insert into point (assessed, embedding_id, scan_name) 
+        await sql`insert into ${sql(
+          clusterTable
+        )} (assessed, embedding_id, scan_name) 
         values (true, ${focusPoint.embedding_id}, ${scanName} )`;
       }
     }
