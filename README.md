@@ -1,4 +1,4 @@
-## pgvector-cluster
+## @davepreston/pgvector-cluster
 
 use this module to do cluster scans of your pgvector vectors. The outcome will be a cluster_id associated with each vector to identify groups of data.
 
