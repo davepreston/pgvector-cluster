@@ -9,18 +9,21 @@ async function scan({
   epsilon,
   minPoints,
   name = `${epsilon}/${minPoints}`,
-  vectorTable = '${sql(vectorTable)}',
-  clusterTable = 'point',
+  vectorTable = 'embedding',
   vectorId = 'id',
   vectorColumn = 'vector',
+  clusterTable = 'point',
 } = {}) {
   try {
+    await createTableIfNecessary({ clusterTable });
     let focusPoint;
     do {
       focusPoint = (
         await sql`select ${sql(clusterTable)}.id as point_id, ${sql(
           clusterTable
-        )}.cluster_id, ${sql(vectorTable)}.id as embedding_id, ${sql(vectorTable)}.${sql(vectorColumn)} 
+        )}.cluster_id, ${sql(vectorTable)}.id as embedding_id, ${sql(
+          vectorTable
+        )}.${sql(vectorColumn)} 
         from ${sql(vectorTable)}
         left join ${sql(clusterTable)} on ${sql(
           clusterTable
@@ -74,7 +77,9 @@ async function assessSurroundingArea({
       clusterTable
     )}.embedding_id = ${sql(vectorTable)}.${sql('id')} 
             and ${sql(clusterTable)}.scan_name = ${scanName}
-          where ${sql(vectorTable)}.${sql(vectorColumn)} <=> ${focusPoint.vector} < ${epsilon}
+          where ${sql(vectorTable)}.${sql(vectorColumn)} <=> ${
+      focusPoint[vectorColumn]
+    } < ${epsilon}
       `;
     if (neighbors.length >= minPoints) {
       const clusterId = focusPoint.cluster_id || getNextClusterId();
@@ -135,4 +140,20 @@ let clusterId = 0;
 function getNextClusterId() {
   clusterId++;
   return clusterId;
+}
+
+async function createTableIfNecessary({ clusterTable }) {
+  try {
+    await sql`CREATE TABLE IF NOT EXISTS ${sql(clusterTable)} (
+    id SERIAL PRIMARY KEY,
+    scan_name TEXT NOT NULL,
+    embedding_id INTEGER NOT NULL,
+    assessed BOOLEAN NOT NULL DEFAULT false,
+    cluster_id INTEGER,
+    type TEXT,
+    created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+)`;
+  } catch (error) {
+    console.error('Issue creating table: ', error);
+  }
 }
