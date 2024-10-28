@@ -12,6 +12,7 @@
   },
   "keywords": [
     "pgvector",
+    "vectors",
     "embeddings",
     "dbscan",
     "cluster",

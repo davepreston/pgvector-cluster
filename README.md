@@ -21,7 +21,7 @@ scan
 const { scan } = require('@davepreston/pgvector-cluster');
 
 scan({
-  vectorTable: 'embedding',
+  vectorTable: 'vector',
   clusterTable: 'point',
   name: 'first run',
   epsilon: 0.03,
@@ -35,7 +35,7 @@ scan({
 CREATE TABLE IF NOT EXISTS point (
     id SERIAL PRIMARY KEY,
     scan_name TEXT NOT NULL, -- must be unique scan_name for this scan
-    embedding_id INTEGER NOT NULL, -- connects to the vector table
+    vector_id INTEGER NOT NULL, -- connects to the vector table
     assessed BOOLEAN NOT NULL DEFAULT false, -- scan will continue until all records are true with matching scan_name
     cluster_id INTEGER, -- null means no cluster
     type TEXT, -- 'core' if a point is considered a core by DBSCAN

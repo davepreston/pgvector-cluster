@@ -12,8 +12,8 @@ const { scan } = require('./index');
   const name = `timetest 3: ${epsilon}/${minPoints}`;
 
   await scan({
-    vectorTable: 'embedding',
-    clusterTable: 'no_point',
+    vectorTable: 'vector',
+    clusterTable: 'last_point',
     epsilon,
     minPoints,
     name,

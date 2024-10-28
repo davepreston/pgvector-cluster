@@ -9,7 +9,7 @@ async function scan({
   epsilon,
   minPoints,
   name = `${epsilon}/${minPoints}`,
-  vectorTable = 'embedding',
+  vectorTable = 'vector',
   vectorId = 'id',
   vectorColumn = 'vector',
   clusterTable = 'point',
@@ -21,7 +21,7 @@ async function scan({
       focusPoint = (
         await sql`select ${sql(clusterTable)}.id as point_id, ${sql(
           clusterTable
-        )}.cluster_id, ${sql(vectorTable)}.id as embedding_id, ${sql(
+        )}.cluster_id, ${sql(vectorTable)}.id as vector_id, ${sql(
           vectorTable
         )}.${sql(vectorColumn)} 
         from ${sql(vectorTable)}
@@ -29,7 +29,7 @@ async function scan({
           clusterTable
         )}.scan_name = ${name} and ${sql(vectorTable)}.id = ${sql(
           clusterTable
-        )}.embedding_id
+        )}.vector_id
         where ${sql(clusterTable)}.assessed = false or ${sql(
           clusterTable
         )}.assessed is null
@@ -71,11 +71,11 @@ async function assessSurroundingArea({
   try {
     const neighbors = await sql`SELECT ${sql(
       clusterTable
-    )}.id as point_id, ${sql(vectorTable)}.${sql(vectorId)} as embedding_id
+    )}.id as point_id, ${sql(vectorTable)}.${sql(vectorId)} as vector_id
           FROM ${sql(vectorTable)}
           left join ${sql(clusterTable)} on ${sql(
       clusterTable
-    )}.embedding_id = ${sql(vectorTable)}.${sql('id')} 
+    )}.vector_id = ${sql(vectorTable)}.${sql('id')} 
             and ${sql(clusterTable)}.scan_name = ${scanName}
           where ${sql(vectorTable)}.${sql(vectorColumn)} <=> ${
       focusPoint[vectorColumn]
@@ -94,9 +94,9 @@ async function assessSurroundingArea({
       } else {
         await sql`insert into ${sql(
           clusterTable
-        )} (assessed, embedding_id, scan_name, cluster_id, type) 
+        )} (assessed, vector_id, scan_name, cluster_id, type) 
         values (true, ${
-          focusPoint.embedding_id
+          focusPoint.vector_id
         }, ${scanName}, ${clusterId}, 'core')
       `;
       }
@@ -105,9 +105,9 @@ async function assessSurroundingArea({
       if (newNeighbors.length) {
         await sql`insert into ${sql(
           clusterTable
-        )} (embedding_id, scan_name, cluster_id) 
+        )} (vector_id, scan_name, cluster_id) 
        values ${sql(
-         newNeighbors.map((i) => [i.embedding_id, scanName, clusterId])
+         newNeighbors.map((i) => [i.vector_id, scanName, clusterId])
        )}`;
       }
 
@@ -126,8 +126,8 @@ async function assessSurroundingArea({
       } else {
         await sql`insert into ${sql(
           clusterTable
-        )} (assessed, embedding_id, scan_name) 
-        values (true, ${focusPoint.embedding_id}, ${scanName} )`;
+        )} (assessed, vector_id, scan_name) 
+        values (true, ${focusPoint.vector_id}, ${scanName} )`;
       }
     }
   } catch (error) {
@@ -147,7 +147,7 @@ async function createTableIfNecessary({ clusterTable }) {
     await sql`CREATE TABLE IF NOT EXISTS ${sql(clusterTable)} (
     id SERIAL PRIMARY KEY,
     scan_name TEXT NOT NULL,
-    embedding_id INTEGER NOT NULL,
+    vector_id INTEGER NOT NULL,
     assessed BOOLEAN NOT NULL DEFAULT false,
     cluster_id INTEGER,
     type TEXT,
